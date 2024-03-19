@@ -1,6 +1,8 @@
-from annotation_tool import AnnotationTool
+import os
+import json
 import tkinter as tk
 from tkinter import filedialog
+from annotation_tool import AnnotationTool
 
 
 class CustomAnnotationTool:
@@ -26,25 +28,26 @@ class CustomAnnotationTool:
     def load_images(self):
         directory = filedialog.askdirectory(title="Select Image Directory")
         if directory:
-            self.image_files = [file for file in os.listdir(
-                directory) if file.endswith(('.jpg', '.jpeg', '.png'))]
+            self.image_files = [os.path.join(directory, file) for file in os.listdir(
+                directory) if file.endswith('.png')]
             if self.image_files:
                 self.current_image_index = 0
                 self.show_image()
 
     def show_image(self):
-        image_path = self.image_files[self.current_image_index]
-        self.annotation_tool = AnnotationTool([image_path])
-        self.annotation_tool.mainloop()
-        self.annotation_data.append(self.annotation_tool.get_annotations())
-        self.next_image()
+        if self.current_image_index < len(self.image_files):
+            image_path = self.image_files[self.current_image_index]
+            self.annotation_tool = AnnotationTool(
+                [image_path], layers=['foreground', 'background'])
+            self.annotation_tool.mainloop()
+            self.annotation_data.append(self.annotation_tool.get_annotations())
+            self.next_image()
+        else:
+            self.save_button.config(state=tk.NORMAL)
 
     def next_image(self):
         self.current_image_index += 1
-        if self.current_image_index < len(self.image_files):
-            self.show_image()
-        else:
-            self.save_button.config(state=tk.NORMAL)
+        self.show_image()
 
     def save_annotations(self):
         save_path = filedialog.asksaveasfilename(
