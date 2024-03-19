@@ -62,16 +62,21 @@ class AnnotationTool:
         self.img_label.img = tk.PhotoImage(
             data=cv2.imencode('.png', image)[1].tobytes())
         self.img_label.config(image=self.img_label.img)
+        self.canvas.delete("all")
+        self.canvas.create_image(0, 0, anchor="nw", image=self.img_label.img)
+        self.canvas.bind("<ButtonPress-1>", self.start_rectangle)
 
     def start_rectangle(self, event):
         self.start_x = event.x
         self.start_y = event.y
-        self.rect = self.canvas.create_rectangle(
-            self.start_x, self.start_y, self.start_x, self.start_y, outline="red")
+        self.canvas.bind("<B1-Motion>", self.draw_rectangle)
+        self.canvas.bind("<ButtonRelease-1>", self.end_rectangle)
 
     def draw_rectangle(self, event):
         cur_x, cur_y = event.x, event.y
-        self.canvas.coords(self.rect, self.start_x, self.start_y, cur_x, cur_y)
+        self.canvas.delete(self.rect)
+        self.rect = self.canvas.create_rectangle(
+            self.start_x, self.start_y, cur_x, cur_y, outline="red")
 
     def end_rectangle(self, event):
         cur_x, cur_y = event.x, event.y
@@ -80,38 +85,15 @@ class AnnotationTool:
             "class": None,
             "coordinates": [self.start_x, self.start_y, cur_x, cur_y]
         })
-        self.canvas.unbind("<ButtonPress-1>")
         self.canvas.unbind("<B1-Motion>")
         self.canvas.unbind("<ButtonRelease-1>")
-        self.select_class()
-
-    def select_class(self):
-        class_window = tk.Toplevel(self.root)
-        class_window.title("Select Class")
-        class_var = tk.StringVar()
-        class_var.set("Class 1")
-
-        class_label = tk.Label(class_window, text="Select Class:")
-        class_label.pack()
-
-        class_menu = tk.OptionMenu(
-            class_window, class_var, "Class 1", "Class 2", "Class 3", "Class 4")
-        class_menu.pack()
-
-        confirm_button = tk.Button(class_window, text="Confirm", command=lambda: self.confirm_class(
-            class_window, class_var.get()))
-        confirm_button.pack()
-
-    def confirm_class(self, class_window, selected_class):
-        class_window.destroy()
-        self.annotation_data[-1]["class"] = selected_class
-        self.next_image()
+        self.next_button.config(state=tk.NORMAL)
 
     def next_image(self):
         self.current_image_index += 1
         if self.current_image_index < len(self.image_files):
             self.show_image()
-            self.canvas.delete("all")
+            self.next_button.config(state=tk.DISABLED)
         else:
             self.save_button.config(state=tk.NORMAL)
 
@@ -122,11 +104,6 @@ class AnnotationTool:
             with open(save_path, 'w') as f:
                 json.dump(self.annotation_data, f, indent=4)
             print("Annotations saved successfully.")
-
-    def annotate_image(self):
-        self.canvas.bind("<ButtonPress-1>", self.start_rectangle)
-        self.canvas.bind("<B1-Motion>", self.draw_rectangle)
-        self.canvas.bind("<ButtonRelease-1>", self.end_rectangle)
 
 
 if __name__ == "__main__":
